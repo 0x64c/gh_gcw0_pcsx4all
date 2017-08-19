@@ -15,9 +15,9 @@ Type=Application
 StartupNotify=true
 Icon=pcsxr-icon-small
 Categories=emulators;
-MimeType=application/x-pcsx4all-rom;application/x-pcsx4all-rom;application/bin;application/iso;
 EOF
 
+#MimeType=application/x-pcsx4all-rom;application/x-pcsx4all-rom;application/bin;application/iso;
 # create opk
 FLIST="pcsx4all"
 FLIST="${FLIST} default.gcw0.desktop"

@@ -1048,6 +1048,9 @@ static MENUITEM gui_GameMenuItems[] = {
 	{(char *)"Swap CD", &gui_swap_cd, NULL, NULL, NULL},
 	{(char *)"Load state", &gui_StateLoad, NULL, NULL, NULL},
 	{(char *)"Save state", &gui_StateSave, NULL, NULL, NULL},
+	{(char *)"GPU settings", &gui_GPUSettings, NULL, NULL, NULL},
+	{(char *)"SPU settings", &gui_SPUSettings, NULL, NULL, NULL},
+	{(char *)"Core settings", &gui_Settings, NULL, NULL, NULL},
 	{(char *)"Quit", &gui_Quit, NULL, NULL, NULL},
 	{0}
 };

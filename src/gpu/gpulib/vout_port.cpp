@@ -35,12 +35,12 @@
 #define s32 int32_t
 #define s64 int64_t
 
-static inline u16 middle(u16 s1, u16 s2, u16 s3, u16 s4)
+static inline u16 middle(u16 s1, u16 s2, u16 s3)
 {
 	u16 x, y, temp;
-	u16 a[] = {s1, s2, s3, s4};
+	u16 a[] = {s1, s2, s3};
 
-	for(y=0; y<4; y++){
+	for(y=0; y<2; y++){
 		for(x=1; x<3; x++){
 			if(a[x] > a[y]){
 				temp = a[x];
@@ -55,27 +55,37 @@ static inline u16 middle(u16 s1, u16 s2, u16 s3, u16 s4)
 static inline u16 mask_filter(u16 *s)
 {
   // #define RGB16(C)     ((((C)&(0x1f<<10))>>10) | (((C)&(0x1f<<5))<<1) | (((C)&(0x1f))<<11))
-	u16 r1 = (s[0] & 0x7c00) >> 10;
-	u16 r2 = (s[1] & 0x7c00) >> 10;
+	u16 r0 = (s[0] & 0x7c00) >> 10;
+	u16 r1 = (s[1] & 0x7c00) >> 10;
+	//u16 r2 = (s[2] & 0x7c00) >> 10;
 	
-	u16 r3 = (s[0+1024] & 0x7c00) >> 10;
-	u16 r4 = (s[1+1024] & 0x7c00) >> 10;
+	//u16 r3 = (s[0+1024] & 0x7c00) >> 10;
+	//u16 r4 = (s[1+1024] & 0x7c00) >> 10;
+	//u16 r5 = (s[2+1024] & 0x7c00) >> 10;
 
-	u16 g1 = (s[0] & 0x03e0) >> 5;
-	u16 g2 = (s[1] & 0x03e0) >> 5;
+	u16 g0 = (s[0] & 0x03e0) >> 5;
+	u16 g1 = (s[1] & 0x03e0) >> 5;
+	//u16 g2 = (s[2] & 0x03e0) >> 5;
 
-	u16 g3 = (s[0+1024] & 0x03e0) >> 5;
-	u16 g4 = (s[1+1024] & 0x03e0) >> 5;
+	//u16 g3 = (s[0+1024] & 0x03e0) >> 5;
+	//u16 g4 = (s[1+1024] & 0x03e0) >> 5;
+	//u16 g5 = (s[2+1024] & 0x03e0) >> 5;
 	
-	u16 b1 = s[0] & 0x1f;
-	u16 b2 = s[1] & 0x1f;
+	u16 b0 = s[0] & 0x1f;
+	u16 b1 = s[1] & 0x1f;
+	//u16 b2 = s[2] & 0x1f;
 
-	u16 b3 = s[0+1024] & 0x1f;
-	u16 b4 = s[1+1024] & 0x1f;
+	//u16 b3 = s[0+1024] & 0x1f;
+	//u16 b4 = s[1+1024] & 0x1f;
+	//u16 b5 = s[2+1024] & 0x1f;
 
-	u16 r = (r1 + r2) / 2;
-	u16 g = (g1 + g2) / 2;
-	u16 b = (b1 + b2) / 2;
+	u16 r = (r0 + r1) / 2;
+	u16 g = (g0 + g1) / 2;
+	u16 b = (b0 + b1) / 2;
+
+	//u16 r = (r0 + r1 + r2) / 3;
+	//u16 g = (g0 + g1 + g2) / 3;
+	//u16 b = (b0 + b1 + b2) / 3;
 
 	//u16 r = (r1 + r2 + r3 + r4) / 4;
 	//u16 g = (g1 + g2 + g3 + g4) / 4;
@@ -84,6 +94,10 @@ static inline u16 mask_filter(u16 *s)
 	//u16 r = middle(r1, r2, r3, r4);
 	//u16 g = middle(g1, g2, g3, g4);
 	//u16 b = middle(b1, b2, b3, b4);
+	
+	//u16 r = middle(r0, r1, r2);
+	//u16 g = middle(g0, g1, g2);
+	//u16 b = middle(b0, b1, b2);
 	return (b<<11) | (g<<6) | r;
 }
 
@@ -221,8 +235,9 @@ static inline void GPU_BlitWWWWWS(const void* src, u16* dst16, bool isRGB24)
 	{
 #ifndef USE_BGR15
 		uCount = 32;
-		const u16* src16 = (const u16*) src;
+		u16* src16 = (u16*)src;
 		do {
+		#if 0
 			dst16[ 0] = RGB16(src16[0]);
 			dst16[ 1] = RGB16(src16[1]);
 			dst16[ 2] = RGB16(src16[2]);
@@ -233,6 +248,18 @@ static inline void GPU_BlitWWWWWS(const void* src, u16* dst16, bool isRGB24)
 			dst16[ 7] = RGB16(src16[8]);
 			dst16[ 8] = RGB16(src16[9]);
 			dst16[ 9] = RGB16(src16[10]);
+		#else
+			dst16[ 0] = mask_filter(&src16[0]);
+			dst16[ 1] = mask_filter(&src16[1]);
+			dst16[ 2] = mask_filter(&src16[2]);
+			dst16[ 3] = mask_filter(&src16[3]);
+			dst16[ 4] = mask_filter(&src16[4]);
+			dst16[ 5] = mask_filter(&src16[6]);
+			dst16[ 6] = mask_filter(&src16[7]);
+			dst16[ 7] = mask_filter(&src16[8]);
+			dst16[ 8] = mask_filter(&src16[9]);
+			dst16[ 9] = mask_filter(&src16[10]);
+		#endif
 			dst16 += 10;
 			src16 += 12;
 		} while (--uCount);
