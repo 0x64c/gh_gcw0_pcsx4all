@@ -303,8 +303,9 @@ static inline void GPU_BlitWWWWWWWWS(const void* src, u16* dst16, bool isRGB24, 
 	{
 #ifndef USE_BGR15
 		uCount = 20;
-		const u16* src16 = ((const u16*) src) + uClip_src;
+		u16* src16 = ((u16*) src) + uClip_src;
 		do {
+		#if 0
 			dst16[ 0] = RGB16(src16[0]);
 			dst16[ 1] = RGB16(src16[1]);
 			dst16[ 2] = RGB16(src16[2]);
@@ -313,7 +314,6 @@ static inline void GPU_BlitWWWWWWWWS(const void* src, u16* dst16, bool isRGB24, 
 			dst16[ 5] = RGB16(src16[5]);
 			dst16[ 6] = RGB16(src16[6]);
 			dst16[ 7] = RGB16(src16[7]);
-
 			dst16[ 8] = RGB16(src16[9]);
 			dst16[ 9] = RGB16(src16[10]);
 			dst16[10] = RGB16(src16[11]);
@@ -322,6 +322,24 @@ static inline void GPU_BlitWWWWWWWWS(const void* src, u16* dst16, bool isRGB24, 
 			dst16[13] = RGB16(src16[14]);
 			dst16[14] = RGB16(src16[15]);
 			dst16[15] = RGB16(src16[16]);
+		#else
+			dst16[ 0] = mask_filter(&src16[0]);
+			dst16[ 1] = mask_filter(&src16[1]);
+			dst16[ 2] = mask_filter(&src16[2]);
+			dst16[ 3] = mask_filter(&src16[3]);
+			dst16[ 4] = mask_filter(&src16[4]);
+			dst16[ 5] = mask_filter(&src16[5]);
+			dst16[ 6] = mask_filter(&src16[6]);
+			dst16[ 7] = mask_filter(&src16[7]);
+			dst16[ 8] = mask_filter(&src16[9]);
+			dst16[ 9] = mask_filter(&src16[10]);
+			dst16[10] = mask_filter(&src16[11]);
+			dst16[11] = mask_filter(&src16[12]);
+			dst16[12] = mask_filter(&src16[13]);
+			dst16[13] = mask_filter(&src16[14]);
+			dst16[14] = mask_filter(&src16[15]);
+			dst16[15] = mask_filter(&src16[16]);	
+		#endif
 			dst16 += 16;
 			src16 += 18;
 		} while (--uCount);
@@ -567,7 +585,6 @@ void vout_update(void)
 	int incY = (h0 == 480) ? 2 : 1;
 	h0 = ((h0 == 480) ? 2048 : 1024);
   //printf("steward, %s, x:%d y:%d w:%d h0:%d h1:%d\n", __func__, x0, y0, w0, h0, h1);
-
 	switch ( w0 )
 	{
 		case 256: {
@@ -620,7 +637,6 @@ void vout_update(void)
 			}
 		} break;
 	}
-
 	video_flip();
 }
 
