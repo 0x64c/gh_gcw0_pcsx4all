@@ -73,9 +73,14 @@ static inline u16 mask_filter(u16 *s)
 	u16 b3 = s[0+1024] & 0x1f;
 	u16 b4 = s[1+1024] & 0x1f;
 
-	u16 r = (r1 + r2 + r3 + r4) / 4;
-	u16 g = (g1 + g2 + g3 + g4) / 4;
-	u16 b = (b1 + b2 + b3 + b4) / 4;
+	u16 r = (r1 + r2) / 2;
+	u16 g = (g1 + g2) / 2;
+	u16 b = (b1 + b2) / 2;
+
+	//u16 r = (r1 + r2 + r3 + r4) / 4;
+	//u16 g = (g1 + g2 + g3 + g4) / 4;
+	//u16 b = (b1 + b2 + b3 + b4) / 4;
+
 	//u16 r = middle(r1, r2, r3, r4);
 	//u16 g = middle(g1, g2, g3, g4);
 	//u16 b = middle(b1, b2, b3, b4);
