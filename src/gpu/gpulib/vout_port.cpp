@@ -331,6 +331,33 @@ static inline void GPU_BlitWWDWW(const void* src, u16* dst16, bool isRGB24)
 	}
 }
 
+static inline u16 mask_filter(u16 *s)
+{
+  // #define RGB16(C)     ((((C)&(0x1f<<10))>>10) | (((C)&(0x1f<<5))<<1) | (((C)&(0x1f))<<11))
+	u16 r1 = (s[0] & 0x7c00) >> 10;
+	u16 r2 = (s[1] & 0x7c00) >> 10;
+	
+	u16 r3 = (s[0+1024] & 0x7c00) >> 10;
+	u16 r4 = (s[1+1024] & 0x7c00) >> 10;
+
+	u16 g1 = (s[0] & 0x03e0) >> 5;
+	u16 g2 = (s[1] & 0x03e0) >> 5;
+
+	u16 g3 = (s[0+1024] & 0x03e0) >> 5;
+	u16 g4 = (s[1+1024] & 0x03e0) >> 5;
+	
+	u16 b1 = s[0] & 0x1f;
+	u16 b2 = s[1] & 0x1f;
+
+	u16 b3 = s[0+1024] & 0x1f;
+	u16 b4 = s[1+1024] & 0x1f;
+
+	u16 r = (r1 + r2 + r3 + r4) / 4;
+	u16 g = (g1 + g2 + g3 + g4) / 4;
+	u16 b = (b1 + b2 + b3 + b4) / 4;
+
+	return (b<<11) | (g<<6) | r;
+}
 
 static inline void GPU_BlitWS(const void* src, u16* dst16, bool isRGB24)
 {
@@ -338,8 +365,9 @@ static inline void GPU_BlitWS(const void* src, u16* dst16, bool isRGB24)
 	if (!isRGB24) {
 #ifndef USE_BGR15
 		uCount = 20;
-		const u16* src16 = (const u16*) src;
+		u16* src16 = (u16*)src;
 		do {
+		#if 0
 			dst16[ 0] = RGB16(src16[0]);
 			dst16[ 1] = RGB16(src16[2]);
 			dst16[ 2] = RGB16(src16[4]);
@@ -359,6 +387,48 @@ static inline void GPU_BlitWS(const void* src, u16* dst16, bool isRGB24)
 			dst16[13] = RGB16(src16[26]);
 			dst16[14] = RGB16(src16[28]);
 			dst16[15] = RGB16(src16[30]);
+		#else
+			/*
+			dst16[ 0] = RGB16(src16[0]);
+			dst16[ 1] = RGB16(src16[2]);
+			dst16[ 2] = RGB16(src16[4]);
+			dst16[ 3] = RGB16(src16[6]);
+
+			dst16[ 4] = RGB16(src16[8]);
+			dst16[ 5] = RGB16(src16[10]);
+			dst16[ 6] = RGB16(src16[12]);
+			dst16[ 7] = RGB16(src16[14]);
+
+			dst16[ 8] = RGB16(src16[16]);
+			dst16[ 9] = RGB16(src16[18]);
+			dst16[10] = RGB16(src16[20]);
+			dst16[11] = RGB16(src16[22]);
+
+			dst16[12] = RGB16(src16[24]);
+			dst16[13] = RGB16(src16[26]);
+			dst16[14] = RGB16(src16[28]);
+			dst16[15] = RGB16(src16[30]);
+			*/
+			dst16[ 0] = mask_filter(&src16[0]);
+			dst16[ 1] = mask_filter(&src16[2]);
+			dst16[ 2] = mask_filter(&src16[4]);
+			dst16[ 3] = mask_filter(&src16[6]);
+
+			dst16[ 4] = mask_filter(&src16[8]);
+			dst16[ 5] = mask_filter(&src16[10]);
+			dst16[ 6] = mask_filter(&src16[12]);
+			dst16[ 7] = mask_filter(&src16[14]);
+
+			dst16[ 8] = mask_filter(&src16[16]);
+			dst16[ 9] = mask_filter(&src16[18]);
+			dst16[10] = mask_filter(&src16[20]);
+			dst16[11] = mask_filter(&src16[22]);
+
+			dst16[12] = mask_filter(&src16[24]);
+			dst16[13] = mask_filter(&src16[26]);
+			dst16[14] = mask_filter(&src16[28]);
+			dst16[15] = mask_filter(&src16[30]);	
+		#endif
 
 			dst16 += 16;
 			src16 += 32;
@@ -453,6 +523,7 @@ void vout_update(void)
 
 	int incY = (h0 == 480) ? 2 : 1;
 	h0 = ((h0 == 480) ? 2048 : 1024);
+  //printf("steward, %s, x:%d y:%d w:%d h0:%d h1:%d\n", __func__, x0, y0, w0, h0, h1);
 
 	switch ( w0 )
 	{
