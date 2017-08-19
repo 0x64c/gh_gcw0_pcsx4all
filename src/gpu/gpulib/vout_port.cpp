@@ -420,27 +420,6 @@ static inline void GPU_BlitWS(const void* src, u16* dst16, bool isRGB24)
 			dst16[14] = RGB16(src16[28]);
 			dst16[15] = RGB16(src16[30]);
 		#else
-			/*
-			dst16[ 0] = RGB16(src16[0]);
-			dst16[ 1] = RGB16(src16[2]);
-			dst16[ 2] = RGB16(src16[4]);
-			dst16[ 3] = RGB16(src16[6]);
-
-			dst16[ 4] = RGB16(src16[8]);
-			dst16[ 5] = RGB16(src16[10]);
-			dst16[ 6] = RGB16(src16[12]);
-			dst16[ 7] = RGB16(src16[14]);
-
-			dst16[ 8] = RGB16(src16[16]);
-			dst16[ 9] = RGB16(src16[18]);
-			dst16[10] = RGB16(src16[20]);
-			dst16[11] = RGB16(src16[22]);
-
-			dst16[12] = RGB16(src16[24]);
-			dst16[13] = RGB16(src16[26]);
-			dst16[14] = RGB16(src16[28]);
-			dst16[15] = RGB16(src16[30]);
-			*/
 			dst16[ 0] = mask_filter(&src16[0]);
 			dst16[ 1] = mask_filter(&src16[2]);
 			dst16[ 2] = mask_filter(&src16[4]);
