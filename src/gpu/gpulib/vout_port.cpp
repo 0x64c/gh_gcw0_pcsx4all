@@ -611,7 +611,7 @@ void vout_update(void)
 
 		case 368: {
 			for (int y1=y0+h1; y0<y1; y0+=incY) {
-				GPU_BlitWWWWWWWWS(src16 + src16_offs, dst16, isRGB24, 4);
+				GPU_BlitWWWWWWWWS(src16 + src16_offs, dst16, isRGB24, 0);
 				dst16 += VIDEO_WIDTH;
 				src16_offs = (src16_offs + h0) & src16_offs_msk;
 			}
