@@ -302,10 +302,10 @@ static inline void GPU_BlitWWWWWWWWS(const void* src, u16* dst16, bool isRGB24, 
 	if (!isRGB24)
 	{
 #ifndef USE_BGR15
-		uCount = 20;
 		u16* src16 = ((u16*) src) + uClip_src;
-		do {
 		#if 0
+		uCount = 20;
+		do {
 			dst16[ 0] = RGB16(src16[0]);
 			dst16[ 1] = RGB16(src16[1]);
 			dst16[ 2] = RGB16(src16[2]);
@@ -322,7 +322,23 @@ static inline void GPU_BlitWWWWWWWWS(const void* src, u16* dst16, bool isRGB24, 
 			dst16[13] = RGB16(src16[14]);
 			dst16[14] = RGB16(src16[15]);
 			dst16[15] = RGB16(src16[16]);
+			dst16 += 16;
+			src16 += 18;
+		} while (--uCount);
 		#else
+			u16 x, cnt=0, sx=0;
+			for(x=0; x<320; x++){
+				sx++;
+				if(++cnt == 7){
+					cnt = 0;
+					dst16[x] = mask_filter(&src16[sx]);
+					sx++;
+				}
+				else{
+					dst16[x] = RGB16(src16[sx]);
+				}
+			}
+			/*
 			dst16[ 0] = mask_filter(&src16[0]);
 			dst16[ 1] = mask_filter(&src16[1]);
 			dst16[ 2] = mask_filter(&src16[2]);
@@ -339,10 +355,8 @@ static inline void GPU_BlitWWWWWWWWS(const void* src, u16* dst16, bool isRGB24, 
 			dst16[13] = mask_filter(&src16[14]);
 			dst16[14] = mask_filter(&src16[15]);
 			dst16[15] = mask_filter(&src16[16]);	
+			*/
 		#endif
-			dst16 += 16;
-			src16 += 18;
-		} while (--uCount);
 #else
 		uCount = 40;
 		const u16* src16 = ((const u16*) src) + uClip_src;
