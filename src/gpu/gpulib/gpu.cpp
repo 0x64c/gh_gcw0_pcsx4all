@@ -223,7 +223,7 @@ long GPU_init(void)
   gpu.state.hcnt = &hSyncCount;
   gpu.state.frame_count = &frame_counter;
 
-  gpulib_frameskip_prepare();
+  gpulib_frameskip_prepare(Config.FrameSkip);
 
   int ret;
   ret  = vout_init();
@@ -791,9 +791,9 @@ void GPU_getScreenInfo(GPUScreenInfo_t *sinfo)
 	sinfo->pal     = gpu.status.video;
 }
 
-void gpulib_frameskip_prepare(void)
+void gpulib_frameskip_prepare(s8 frameskip)
 {
-  gpu.frameskip.set = Config.FrameSkip;
+  gpu.frameskip.set = frameskip;
   gpu.frameskip.active = 0;
   gpu.frameskip.cnt = 0;
   gpu.frameskip.frame_ready = 1;

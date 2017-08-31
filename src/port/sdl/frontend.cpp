@@ -39,7 +39,7 @@ enum  {
 	KEY_START=1<<8,	KEY_SELECT=1<<9,	KEY_L=1<<10,	KEY_R=1<<11,
 	KEY_A=1<<12,	KEY_B=1<<13,		KEY_X=1<<14,	KEY_Y=1<<15,
 };
-
+#define _KEY_BACK   (KEY_SELECT|KEY_B)
 extern char sstatesdir[PATH_MAX];
 static int saveslot = -1;
 static uint16_t* sshot_img; // Ptr to active image in savestate menu
@@ -243,7 +243,7 @@ char *FileReq(char *dir, const char *ext, char *result)
 
 		video_clear();
 
-		if (keys & KEY_SELECT) {
+		if (keys & _KEY_BACK) {
 			FREE_LIST();
 			key_reset();
 			return NULL;
@@ -926,7 +926,7 @@ static int gui_select_multicd(bool swapping_cd)
 		video_clear();
 		u32 keys = key_read();
 
-		if ((swapping_cd) && (keys & KEY_SELECT)) {
+		if ((swapping_cd) && (keys & _KEY_BACK)) {
 			key_reset();
 			return 0;
 		}
@@ -1175,6 +1175,29 @@ static char *VSyncWA_show()
 	return buf;
 }
 
+static int Analog1_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (Config.AnalogArrow < 1) Config.AnalogArrow = 1;
+	} else if (keys & KEY_LEFT) {
+		if (Config.AnalogArrow > 0) Config.AnalogArrow = 0;
+	}
+
+	return 0;
+}
+
+static void Analog1_hint()
+{
+	port_printf(6 * 8, 10 * 8, "Analog Stick -> Arrow Keys");
+}
+
+static char *Analog1_show()
+{
+	static char buf[16] = "\0";
+	sprintf(buf, "%s", Config.AnalogArrow ? "on" : "off");
+	return buf;
+}
+
 static int settings_back()
 {
 	return 1;
@@ -1188,6 +1211,7 @@ static int settings_defaults()
 	Config.HLE = 1;
 	Config.RCntFix = 0;
 	Config.VSyncWA = 0;
+	Config.AnalogArrow = 0;
 #ifdef PSXREC
 	Config.Cpu = 0;
 #else
@@ -1209,6 +1233,7 @@ static MENUITEM gui_SettingsItems[] = {
 	{(char *)"Set BIOS file        ", &bios_set, NULL, NULL, NULL},
 	{(char *)"RCntFix              ", NULL, &RCntFix_alter, &RCntFix_show, &RCntFix_hint},
 	{(char *)"VSyncWA              ", NULL, &VSyncWA_alter, &VSyncWA_show, &VSyncWA_hint},
+	{(char *)"Analog Arrow Keys    ", NULL, &Analog1_alter, &Analog1_show, &Analog1_hint},
 	{(char *)"Restore defaults     ", &settings_defaults, NULL, NULL, NULL},
 	{NULL, NULL, NULL, NULL, NULL},
 	{(char *)"Back to main menu    ", &settings_back, NULL, NULL, NULL},
@@ -1395,23 +1420,23 @@ static char *blending_show()
 	return buf;
 }
 
-static int pixel_skip_alter(u32 keys)
+static int clip_368_alter(u32 keys)
 {
 	if (keys & KEY_RIGHT) {
-		if (gpu_unai_config_ext.pixel_skip == false)
-			gpu_unai_config_ext.pixel_skip = true;
+		if (gpu_unai_config_ext.clip_368 == false)
+			gpu_unai_config_ext.clip_368 = true;
 	} else if (keys & KEY_LEFT) {
-		if (gpu_unai_config_ext.pixel_skip == true)
-			gpu_unai_config_ext.pixel_skip = false;
+		if (gpu_unai_config_ext.clip_368 == true)
+			gpu_unai_config_ext.clip_368 = false;
 	}
 
 	return 0;
 }
 
-static char *pixel_skip_show()
+static char *clip_368_show()
 {
 	static char buf[16] = "\0";
-	sprintf(buf, "%s", gpu_unai_config_ext.pixel_skip == true ? "on" : "off");
+	sprintf(buf, "%s", gpu_unai_config_ext.clip_368 == true ? "on" : "off");
 	return buf;
 }
 #endif
@@ -1427,7 +1452,7 @@ static int gpu_settings_defaults()
 	gpu_unai_config_ext.frameskip_count = 0;
 #endif
 	gpu_unai_config_ext.ilace_force = 0;
-	gpu_unai_config_ext.pixel_skip = 1;
+	gpu_unai_config_ext.clip_368 = 0;
 	gpu_unai_config_ext.lighting = 1;
 	gpu_unai_config_ext.fast_lighting = 1;
 	gpu_unai_config_ext.blending = 1;
@@ -1451,7 +1476,7 @@ static MENUITEM gui_GPUSettingsItems[] = {
 	{(char *)"Lighting             ", NULL, &lighting_alter, &lighting_show, NULL},
 	{(char *)"Fast lighting        ", NULL, &fast_lighting_alter, &fast_lighting_show, NULL},
 	{(char *)"Blending             ", NULL, &blending_alter, &blending_show, NULL},
-	{(char *)"Pixel skip           ", NULL, &pixel_skip_alter, &pixel_skip_show, NULL},
+	{(char *)"Clip 368 -> 352      ", NULL, &clip_368_alter, &clip_368_show, NULL},
 #endif
 	{(char *)"Restore defaults     ", &gpu_settings_defaults, NULL, NULL, NULL},
 	{NULL, NULL, NULL, NULL, NULL},
@@ -1767,7 +1792,14 @@ static int gui_RunMenu(MENU *menu)
 		video_clear();
 
 		// check keys
-		if (keys & KEY_SELECT) {
+		if (keys & _KEY_BACK) {
+		    if (menu == &gui_GameMenu)
+		    {
+		        while (key_read() != 0)
+                {
+                    timer_delay(50);
+                }
+			}
 			key_reset();
 			return 0;
 		} else if (keys & KEY_UP) {
@@ -1823,6 +1855,5 @@ int GameMenu()
 {
 	//NOTE: TODO - reset 'saveslot' var to -1 if a new game is loaded.
 	// currently, we don't support loading a different game during a running game.
-
 	return gui_RunMenu(&gui_GameMenu);
 }

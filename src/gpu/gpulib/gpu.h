@@ -126,7 +126,7 @@ struct gpulib_config_t {
 
 extern gpulib_config_t gpulib_config;
 
-void gpulib_frameskip_prepare(void);
+void gpulib_frameskip_prepare(signed char frameskip);
 void gpulib_set_config(const gpulib_config_t *config);
 
 int  renderer_init(void);

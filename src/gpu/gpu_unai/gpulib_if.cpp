@@ -104,7 +104,7 @@ void renderer_finish(void)
 }
 
 void renderer_notify_res_change(void)
-{
+{/*
   if (PixelSkipEnabled()) {
     // Set blit_mask for high horizontal resolutions. This allows skipping
     //  rendering pixels that would never get displayed on low-resolution
@@ -116,7 +116,7 @@ void renderer_notify_res_change(void)
       case 640: gpu_unai.blit_mask = 0xaa; break; // GPU_BlitWS
       default:  gpu_unai.blit_mask = 0;    break;
     }
-  } else {
+  } else */{
     gpu_unai.blit_mask = 0;
   }
 

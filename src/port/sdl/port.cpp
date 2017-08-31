@@ -236,6 +236,9 @@ void config_load()
 			if (value < FRAMESKIP_MIN || value > FRAMESKIP_MAX)
 				value = FRAMESKIP_OFF;
 			Config.FrameSkip = value;
+		} else if (!strcmp(line, "AnalogArrow")) {
+			sscanf(arg, "%d", &value);
+			Config.AnalogArrow = value;
 		}
 #ifdef SPU_PCSXREARMED
 		else if (!strcmp(line, "SpuUseInterpolation")) {
@@ -295,9 +298,9 @@ void config_load()
 		}
 #endif
 #ifdef GPU_UNAI
-		else if (!strcmp(line, "pixel_skip")) {
+		else if (!strcmp(line, "clip_368")) {
 			sscanf(arg, "%d", &value);
-			gpu_unai_config_ext.pixel_skip = value;
+			gpu_unai_config_ext.clip_368 = value;
 		} else if (!strcmp(line, "lighting")) {
 			sscanf(arg, "%d", &value);
 			gpu_unai_config_ext.lighting = value;
@@ -355,12 +358,13 @@ void config_save()
 		   "ForcedXAUpdates %d\n"
 		   "ShowFps %d\n"
 		   "FrameLimit %d\n"
-		   "FrameSkip %d\n",
+		   "FrameSkip %d\n"
+		   "AnalogArrow %d\n",
 		   CONFIG_VERSION, Config.Xa, Config.Mdec, Config.PsxAuto,
 		   Config.Cdda, Config.HLE, Config.RCntFix, Config.VSyncWA,
 		   Config.Cpu, Config.PsxType, Config.SpuIrq, Config.SyncAudio,
 		   Config.SpuUpdateFreq, Config.ForcedXAUpdates, Config.ShowFps, Config.FrameLimit,
-		   Config.FrameSkip);
+		   Config.FrameSkip, Config.AnalogArrow);
 
 #ifdef SPU_PCSXREARMED
 	fprintf(f, "SpuUseInterpolation %d\n", spu_config.iUseInterpolation);
@@ -374,13 +378,13 @@ void config_save()
 
 #ifdef GPU_UNAI
 	fprintf(f, "interlace %d\n"
-		   "pixel_skip %d\n"
+		   "clip_368 %d\n"
 		   "lighting %d\n"
 		   "fast_lighting %d\n"
 		   "blending %d\n"
 		   "dithering %d\n",
 		   gpu_unai_config_ext.ilace_force,
-		   gpu_unai_config_ext.pixel_skip,
+		   gpu_unai_config_ext.clip_368,
 		   gpu_unai_config_ext.lighting,
 		   gpu_unai_config_ext.fast_lighting,
 		   gpu_unai_config_ext.blending,
@@ -441,7 +445,7 @@ static struct {
 	{ SDLK_LALT,		DKEY_CROSS },
 	{ SDLK_TAB,		DKEY_L1 },
 	{ SDLK_BACKSPACE,	DKEY_R1 },
-	//{ SDLK_ESCAPE,		DKEY_SELECT },
+	{ SDLK_ESCAPE,		DKEY_SELECT },
 #else
 	{ SDLK_a,		DKEY_SQUARE },
 	{ SDLK_x,		DKEY_CIRCLE },
@@ -457,32 +461,110 @@ static struct {
 	{ 0, 0 }
 };
 
-static unsigned short pad1 = 0xffff;
+static unsigned short pad1 = 0xffff, _pad1 = 0xffff;
 static unsigned short pad2 = 0xffff;
+static unsigned short analog1 = 0;
+static int menu_check = 0;
+static int select_count = 0;
+boolean use_speedup = false;
+SDL_Joystick * sdl_joy;
+#define joy_commit_range    3276
+enum
+{
+    ANALOG_UP = 1,
+    ANALOG_DOWN = 2,
+    ANALOG_LEFT = 4,
+    ANALOG_RIGHT = 8
+};
+
+void joy_init(void)
+{
+    sdl_joy = SDL_JoystickOpen(0);
+    SDL_JoystickEventState(SDL_ENABLE);
+/*
+	int i;
+	int joy_count;
+	
+	if (SDL_InitSubSystem(SDL_INIT_JOYSTICK))
+		return;
+	
+	joy_count = SDL_NumJoysticks();
+	
+	if (!joy_count)
+		return;
+
+	// now try and open one. If, for some reason it fails, move on to the next one
+	for (i = 0; i < joy_count; i++)
+	{
+		sdl_joy = SDL_JoystickOpen(i);
+		if (sdl_joy)
+		{
+			sdl_joy_num = i;
+			break;
+		}	
+	}
+	
+	// make sure that Joystick event polling is a go
+	SDL_JoystickEventState(SDL_ENABLE);*/
+}
 
 void pad_update(void)
 {
+    int axisval;
 	SDL_Event event;
 	Uint8 *keys = SDL_GetKeyState(NULL);
 
-	while (SDL_PollEvent(&event)) {
-		switch (event.type) {
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
+		{
 		case SDL_QUIT:
 			exit(0);
 			break;
 		case SDL_KEYDOWN:
-			switch (event.key.keysym.sym) {
-#ifndef GCW_ZERO
+			switch (event.key.keysym.sym)
+			{
+            #ifndef GCW_ZERO
 			case SDLK_ESCAPE:
 				event.type = SDL_QUIT;
 				SDL_PushEvent(&event);
 				break;
-#endif
+            #endif
 			case SDLK_v: { Config.ShowFps=!Config.ShowFps; } break;
 			default: break;
 			}
 			break;
-
+        case SDL_JOYAXISMOTION:
+            switch (event.jaxis.axis)
+			{
+			case 0: /* X axis */
+			    axisval = event.jaxis.value;
+			    analog1 &= ~(ANALOG_LEFT | ANALOG_RIGHT);
+				if (axisval > joy_commit_range)
+				{
+				    analog1 |= ANALOG_RIGHT;
+				}
+				else if (axisval < -joy_commit_range)
+				{
+				    analog1 |= ANALOG_LEFT;
+				}
+				break;
+		    case 1: /* Y axis*/
+				axisval = event.jaxis.value;
+				analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
+				if (axisval > joy_commit_range)
+				{
+				    analog1 |= ANALOG_DOWN;
+				}
+				else if (axisval < -joy_commit_range)
+				{
+				    analog1 |= ANALOG_UP;
+				}
+				break;
+		    }
+		    break;
+		case SDL_JOYBUTTONDOWN:
+		    break;
 		default: break;
 		}
 	}
@@ -490,41 +572,121 @@ void pad_update(void)
 	int k = 0;
 	while (keymap[k].key) {
 		if (keys[keymap[k].key]) {
-			pad1 &= ~(1 << keymap[k].bit);
+			_pad1 &= ~(1 << keymap[k].bit);
 		} else {
-			pad1 |= (1 << keymap[k].bit);
+			_pad1 |= (1 << keymap[k].bit);
 		}
 		k++;
 	}
+	pad1 = _pad1;
 
 	/* Special key combos for GCW-Zero */
 #ifdef GCW_ZERO
-	// SELECT+B for psx's SELECT
-	if (keys[SDLK_ESCAPE] && keys[SDLK_LALT]) {
-		pad1 &= ~(1 << DKEY_SELECT);
-		pad1 |= (1 << DKEY_CROSS);
-	} else {
-		pad1 |= (1 << DKEY_SELECT);
-	}
-
-	// SELECT+L1 for psx's L2
-	if (keys[SDLK_ESCAPE] && keys[SDLK_TAB]) {
-		pad1 &= ~(1 << DKEY_L2);
-		pad1 |= (1 << DKEY_L1);
-	} else {
-		pad1 |= (1 << DKEY_L2);
-	}
-
-	// SELECT+R1 for R2
-	if (keys[SDLK_ESCAPE] && keys[SDLK_BACKSPACE]) {
-		pad1 &= ~(1 << DKEY_R2);
-		pad1 |= (1 << DKEY_R1);
-	} else {
-		pad1 |= (1 << DKEY_R2);
-	}
+    // SELECT + 
+    if (keys[SDLK_ESCAPE])
+    {
+        if (!keys[SDLK_RETURN])
+        {
+            menu_check = 1; //SELECT only
+        }
+        else if (menu_check == 1)
+        {
+            menu_check = 2; //SELECT + START
+        }
+        else
+        {// START + SELECT
+            if (use_speedup == false && ++select_count == 70)
+            {
+                use_speedup = true;
+            }
+        }
+    }
+    else
+    {
+        menu_check = 0;
+    }
+    if (use_speedup)
+    {
+        if (!keys[SDLK_ESCAPE] && !keys[SDLK_RETURN])
+        {
+            select_count = 0;
+        }
+        else if (select_count == 0)
+        {
+            use_speedup = false;
+        }
+    }
+    //
+    if (Config.AnalogArrow)
+    {
+        pad1 |= (1 << DKEY_SELECT);
+    	// SELECT+B for psx's SELECT
+    	if (keys[SDLK_ESCAPE] && keys[SDLK_LALT])
+    	{
+    		pad1 &= ~(1 << DKEY_SELECT);
+    		pad1 |= (1 << DKEY_CROSS);
+    	}
+    	// SELECT+L1 for psx's L2
+    	if (keys[SDLK_ESCAPE] && keys[SDLK_TAB])
+    	{
+    		pad1 &= ~(1 << DKEY_L2);
+    		pad1 |= (1 << DKEY_L1);
+    	}
+    	else
+    	{
+    		pad1 |= (1 << DKEY_L2);
+    	}
+    	// SELECT+R1 for R2
+    	if (keys[SDLK_ESCAPE] && keys[SDLK_BACKSPACE])
+    	{
+    		pad1 &= ~(1 << DKEY_R2);
+    		pad1 |= (1 << DKEY_R1);
+    	}
+    	else
+    	{
+    		pad1 |= (1 << DKEY_R2);
+    	}
+    	if ((_pad1 & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
+    	{
+    	    pad1 &= ~(1 << DKEY_UP);
+    	}
+    	if ((_pad1 & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
+    	{
+    	    pad1 &= ~(1 << DKEY_DOWN);
+    	}
+    	if ((_pad1 & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
+    	{
+    	    pad1 &= ~(1 << DKEY_LEFT);
+    	}
+    	if ((_pad1 & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
+    	{
+    	    pad1 &= ~(1 << DKEY_RIGHT);
+    	}
+    }
+    else
+	{// Analog Arrow Off
+        pad1 |= (1 << DKEY_L2) | (1 << DKEY_R2);
+        if (analog1 == ANALOG_UP)
+        {
+            pad1 &= ~((1 << DKEY_L2) | (1 << DKEY_R2));
+        }
+        else if (analog1 == ANALOG_DOWN)
+        {
+            menu_check = 2;
+        }
+        else if (analog1 & ANALOG_LEFT)
+        {
+            pad1 &= ~(1 << DKEY_L2);
+        }
+        else if (analog1 & ANALOG_RIGHT)
+        {
+            pad1 &= ~(1 << DKEY_R2);
+        }
+    }
 
 	// SELECT+START for menu
-	if (keys[SDLK_ESCAPE] && keys[SDLK_RETURN] && !keys[SDLK_LALT]) {
+	if (menu_check == 2 && !keys[SDLK_LALT])
+	{
 		//Sync and close any memcard files opened for writing
 		//TODO: Disallow entering menu until they are synced/closed
 		// automatically, displaying message that write is in progress.
@@ -534,8 +696,10 @@ void pad_update(void)
 		pl_pause();    // Tell plugin_lib we're pausing emu
 		GameMenu();
 		emu_running = true;
-		pad1 |= (1 << DKEY_START);
-		pad1 |= (1 << DKEY_CROSS);
+		use_speedup = false;
+		menu_check = 0;
+		analog1 = 0;
+		pad1 |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
 		video_clear();
 		video_flip();
 		video_clear();
@@ -647,6 +811,7 @@ int main (int argc, char **argv)
 	Config.ShowFps=0;    // 0=don't show FPS
 	Config.FrameLimit = true;
 	Config.FrameSkip = FRAMESKIP_OFF;
+	Config.AnalogArrow = false;
 
 	//zear - Added option to store the last visited directory.
 	strncpy(Config.LastDir, home, MAXPATHLEN); /* Defaults to home directory. */
@@ -726,7 +891,7 @@ int main (int argc, char **argv)
 	// gpu_unai
 #ifdef GPU_UNAI
 	gpu_unai_config_ext.ilace_force = 0;
-	gpu_unai_config_ext.pixel_skip = 1;
+	gpu_unai_config_ext.clip_368 = 0;
 	gpu_unai_config_ext.lighting = 1;
 	gpu_unai_config_ext.fast_lighting = 1;
 	gpu_unai_config_ext.blending = 1;
@@ -912,7 +1077,7 @@ int main (int argc, char **argv)
 		//  (when using pixel-dropping downscaler).
 		//  Can cause visual artifacts, default is on for now (for speed)
 		if (strcmp(argv[i],"-nopixelskip") == 0) {
-			gpu_unai_config_ext.pixel_skip = 0;
+			gpu_unai_config_ext.clip_368 = 0;
 		}
 
 		// Settings specific to older, non-gpulib standalone gpu_unai:
@@ -1104,6 +1269,14 @@ int main (int argc, char **argv)
 			filename[0]='\0';
 		}
 	}
+	
+	extern bool use_clip_368;
+	use_clip_368 = gpu_unai_config_ext.clip_368;
+	if (strncmp(CdromId, "SLPS02124", 9) == 0)
+	{// fix Grandia
+		use_clip_368 = true;
+	}
+	joy_init();
 
 	if (filename[0] != '\0') {
 		printf("Running executable: %s.\n",filename);

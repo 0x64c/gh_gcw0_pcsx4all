@@ -302,10 +302,10 @@ static inline bool ProgressiveInterlaceEnabled()
 //  and pixel-skipping downscaler.
 // TODO: Flesh these out so they return useful values based on whether
 //       running on higher-res device or a resampling downscaler is enabled.
-static inline bool PixelSkipEnabled()
+/*static inline bool PixelSkipEnabled()
 {
 	return gpu_unai.config.pixel_skip;
-}
+}*/
 
 static inline bool LineSkipEnabled()
 {

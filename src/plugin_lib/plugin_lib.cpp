@@ -37,7 +37,7 @@
 #include "gpu/gpulib/gpu.h"
 #endif
 
-static void pl_frameskip_prepare(void);
+static void pl_frameskip_prepare(s8 frameskip);
 static void pl_stats_update(void);
 
 #define MAX_LAG_FRAMES 3
@@ -61,10 +61,10 @@ void pl_clear_borders()
 	pl_data.clear_ctr = 4;
 }
 
-static void pl_frameskip_prepare(void)
+static void pl_frameskip_prepare(s8 frameskip)
 {
 	pl_data.fskip_advice = false;
-	pl_data.frameskip = Config.FrameSkip;
+	pl_data.frameskip = frameskip;
 	pl_data.is_pal = (Config.PsxType == PSXTYPE_PAL);
 	pl_data.frame_interval = pl_data.is_pal ? 20000 : 16667;
 	pl_data.frame_interval1024 = pl_data.is_pal ? 20000*1024 : 17066667;
@@ -77,7 +77,7 @@ static void pl_frameskip_prepare(void)
 		pl_data.vsync_usec_time -= pl_data.frame_interval;
 
 #ifdef USE_GPULIB
-	gpulib_frameskip_prepare();
+	gpulib_frameskip_prepare(frameskip);
 #endif
 }
 
@@ -107,12 +107,13 @@ void pl_frame_limit(void)
 		pmonGetStats(&pl_data.fps_cur, &pl_data.cpu_cur);
 		pl_stats_update();
 	}
-
+    extern boolean use_speedup;
+    s8 framskip = use_speedup == false ? Config.FrameSkip : 3;
 	// If cfg settings change, catch it here
-	if (pl_data.frameskip != Config.FrameSkip ||
+	if (pl_data.frameskip != framskip ||
 	    pl_data.is_pal != (Config.PsxType == PSXTYPE_PAL))
 	{
-		pl_frameskip_prepare();
+		pl_frameskip_prepare(framskip);
 	}
 
 	// tv_expect uses usec*1024 units instead of usecs for better accuracy
@@ -137,7 +138,7 @@ void pl_frame_limit(void)
 		pl_data.tv_expect.tv_usec = usadj << 10;
 	}
 
-	if (Config.FrameLimit && (diff > pl_data.frame_interval)) {
+	if ((Config.FrameLimit && !use_speedup) && (diff > pl_data.frame_interval)) {
 		usleep(diff - pl_data.frame_interval);
 	}
 
@@ -174,7 +175,7 @@ void pl_reset(void)
 	pl_data.fps_cur = pl_data.cpu_cur = 0;
 	pl_data.dynarec_compiled = false;
 	pl_data.dynarec_active_vsyncs = 0;
-	pl_frameskip_prepare();
+	pl_frameskip_prepare(Config.FrameSkip);
 	sprintf(pl_data.stats_msg, "000x000x00 CPU=000%% FPS=000/00");
 	pmonReset(); // Reset performance monitor (FPS,CPU usage,etc)
 }
@@ -189,7 +190,7 @@ void pl_pause(void)
 void pl_resume(void)
 {
 	pmonResume();
-	pl_frameskip_prepare();
+	pl_frameskip_prepare(Config.FrameSkip);
 	GPU_requestScreenRedraw(); // GPU plugin should redraw screen
 }
 

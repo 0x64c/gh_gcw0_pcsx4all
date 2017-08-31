@@ -161,7 +161,8 @@ typedef struct {
 	// Options for performance monitor
 	boolean PerfmonConsoleOutput;
 	boolean PerfmonDetailedStats;
-
+	// add new ...
+    boolean AnalogArrow;
 } PcsxConfig;
 
 extern PcsxConfig Config;
